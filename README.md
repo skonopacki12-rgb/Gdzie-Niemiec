@@ -68,9 +68,14 @@ npm run build:pages     # buduje docs/ (interfejs + warstwa danych ~67 kB po gzi
 ```
 
 Wdrożenie idzie automatycznie: workflow `.github/workflows/pages.yml` przy każdym
-pushu buduje `docs/`, uruchamia testy i publikuje stronę, a przy pierwszym
-przebiegu **sam włącza Pages** (`actions/configure-pages` z `enablement: true`).
-Katalog `docs/` jest w `.gitignore` — powstaje w CI, nie trzymamy go w repo.
+pushu buduje `docs/`, uruchamia testy i publikuje stronę. Katalog `docs/` jest
+w `.gitignore` — powstaje w CI, nie trzymamy go w repo.
+
+**Jednorazowo trzeba włączyć Pages ręcznie:** *Settings → Pages → Build and
+deployment → Source: **GitHub Actions***. Token workflow nie ma uprawnień, by
+utworzyć witrynę Pages za nas (`Resource not accessible by integration`), więc
+pierwszy przebieg bez tego kliknięcia kończy się błędem z taką właśnie
+podpowiedzią. Po włączeniu wystarczy powtórzyć run — kolejne pushe idą już same.
 
 **Jest jeden warunek, którego nie da się sprawdzić z góry.** Przy wersji
 statycznej to przeglądarka odwiedzającego pyta ZTM bezpośrednio, a przeglądarka

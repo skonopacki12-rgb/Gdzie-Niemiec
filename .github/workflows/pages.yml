@@ -34,10 +34,20 @@ jobs:
       - run: npm test
       - run: npm run build:pages
 
+      # Próbuje włączyć Pages samo. Token workflow zwykle nie ma do tego prawa
+      # ("Resource not accessible by integration") - wtedy trzeba raz kliknąć
+      # w ustawieniach repo. Po włączeniu ten krok przechodzi już bez problemu.
       - uses: actions/configure-pages@v5
+        id: pages
+        continue-on-error: true
         with:
-          # Włącza Pages przy pierwszym uruchomieniu - nie trzeba klikać w ustawieniach.
           enablement: true
+
+      - name: Podpowiedz, jak włączyć Pages
+        if: steps.pages.outcome == 'failure'
+        run: |
+          echo "::error title=Włącz GitHub Pages::Settings → Pages → Build and deployment → Source: GitHub Actions. Potem uruchom ten workflow ponownie."
+          exit 1
 
       - uses: actions/upload-pages-artifact@v3
         with:
