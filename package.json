@@ -12,11 +12,15 @@
     "start": "node src/server.js",
     "demo": "node src/server.js --demo",
     "dev": "node --watch src/server.js",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "build:pages": "node scripts/build-pages.mjs"
   },
   "dependencies": {
     "express": "^5.2.1",
     "gtfs-realtime-bindings": "^2.2.0",
     "leaflet": "^1.9.4"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
   }
 }

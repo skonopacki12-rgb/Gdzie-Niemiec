@@ -7,7 +7,7 @@ Aplikacja pobiera pozycje pojazdów z feedu **GTFS-RT ZTM Poznań**, wybiera z n
 wyłącznie wagony z Bonn i pokazuje je na mapie: linia, kierunek, prędkość, wiek
 pozycji i ślad ostatniego przejazdu.
 
-![Podgląd aplikacji](docs/screenshot.png)
+![Podgląd aplikacji](assets/screenshot.png)
 
 ## Uruchomienie
 
@@ -52,11 +52,44 @@ aplikacja zamiast pustej mapy pokaże symulację i wyraźnie ją oznaczy
 
 ## Wdrożenie do sieci
 
-Aplikacja jest serwerem Node (to backend odpytuje ZTM i filtruje tabor), więc
-potrzebuje hostingu uruchamiającego proces — sam hosting plików statycznych nie
-wystarczy. W repo są gotowe konfiguracje dla trzech typowych dróg.
+Są dwie drogi: **wersja statyczna na GitHub Pages** (bez serwera, za darmo,
+ale zależna od polityki CORS po stronie ZTM) albo **wersja serwerowa**, gdzie
+feed pobiera backend i żadne ograniczenia przeglądarki nie obowiązują.
 
-### Fly.io (polecane — region Warszawa)
+### GitHub Pages (bez własnego serwera)
+
+W repo jest też wersja **w pełni statyczna**: ta sama logika — pobranie feedu,
+dekodowanie protobufa, wybór wagonów z Bonn, ślady tras — wykonuje się wtedy
+w przeglądarce, a nie na serwerze. Kod jest współdzielony (`src/tracker.js`
+działa po obu stronach), różni się tylko warstwa startowa.
+
+```bash
+npm run build:pages     # buduje docs/ (interfejs + warstwa danych ~67 kB po gzipie)
+```
+
+Wdrożenie idzie automatycznie: workflow `.github/workflows/pages.yml` przy każdym
+pushu buduje `docs/`, uruchamia testy i publikuje stronę, a przy pierwszym
+przebiegu **sam włącza Pages** (`actions/configure-pages` z `enablement: true`).
+Katalog `docs/` jest w `.gitignore` — powstaje w CI, nie trzymamy go w repo.
+
+**Jest jeden warunek, którego nie da się sprawdzić z góry.** Przy wersji
+statycznej to przeglądarka odwiedzającego pyta ZTM bezpośrednio, a przeglądarka
+zrobi to tylko wtedy, gdy ZTM wysyła nagłówek `Access-Control-Allow-Origin`.
+Sprawdzisz to jedną komendą:
+
+```bash
+curl -sI -H "Origin: https://example.com" \
+  "https://www.ztm.poznan.pl/pl/dla-deweloperow/getGtfsRtFile/?file=vehicle_positions.pb" \
+  | grep -i access-control
+```
+
+- **Coś się wypisało** → wersja na Pages działa samodzielnie, za darmo i bez serwera.
+- **Pusto** → przeglądarka zostanie odcięta przez politykę CORS. Strona pokaże
+  wtedy wyraźny komunikat zamiast udawać, że działa. Zostają dwie drogi: wskazać
+  proxy CORS (`window.GDZIE_NIEMIEC_CONFIG = { corsProxy: '…' }` w `docs/index.html`)
+  albo postawić wersję serwerową, gdzie problem nie występuje, bo feed pobiera backend.
+
+### Fly.io (gdy potrzebny backend — region Warszawa)
 
 ```bash
 fly launch --copy-config --name gdzie-niemiec-twoja-nazwa
@@ -137,6 +170,8 @@ src/demo.js      symulator tramwajów (tryb demo i awaryjny)
 src/tracker.js   cache, filtrowanie, ślady tras
 src/server.js    serwer HTTP i API
 public/          mapa (Leaflet), lista pojazdów, panel statusu
+web/             warstwa startowa wersji statycznej (Tracker w przeglądarce)
+scripts/         build wersji statycznej do docs/
 test/            testy jednostkowe (node:test)
 ```
 

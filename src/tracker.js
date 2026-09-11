@@ -2,7 +2,7 @@
  * Warstwa łącząca: pobiera feed ZTM, wybiera z niego tramwaje z Bonn,
  * pamięta ślady tras i w razie awarii feedu przechodzi w tryb demo.
  */
-import { createFleetMatcher, fleetNumbersFromDictionary } from './fleet.js';
+import { createFleetMatcher, fleetNumbersFromDictionary, normalizeFleetNumber } from './fleet.js';
 import { fetchVehicleDictionary, fetchVehiclePositions } from './ztm.js';
 import { simulateVehicles } from './demo.js';
 import { distance } from './geo.js';
@@ -102,6 +102,9 @@ export class Tracker {
   #decorate(vehicles, nowSec) {
     return vehicles.map((vehicle) => ({
       ...vehicle,
+      // Feed potrafi podać identyfikator z prefiksem ("T_973") - pasażera
+      // interesuje sam numer taborowy.
+      fleetNumber: normalizeFleetNumber(vehicle.id) || normalizeFleetNumber(vehicle.label) || null,
       ageSec: vehicle.timestamp ? Math.max(0, Math.round(nowSec - vehicle.timestamp)) : null,
       trail: this.#rememberTrail(vehicle),
     }));

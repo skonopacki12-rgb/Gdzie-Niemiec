@@ -26,13 +26,23 @@
 
   // Bez dostępu do OSM (firewall, tryb offline) mapa jest czarna - powiedzmy o tym
   // wprost, zamiast zostawiać użytkownika z pustym tłem.
+  let tileWarning = null;
+  let dataError = null;
+
+  /** Brak danych jest ważniejszy niż brak tła mapy - dlatego ma pierwszeństwo. */
+  function renderBanner() {
+    const message = dataError ?? tileWarning;
+    el.banner.hidden = !message;
+    el.banner.textContent = message ?? '';
+  }
+
   let tileErrors = 0;
   tiles.on('tileerror', () => {
     tileErrors += 1;
     if (tileErrors === 4) {
-      el.banner.hidden = false;
-      el.banner.textContent =
+      tileWarning =
         'Nie udało się pobrać kafelków mapy z OpenStreetMap - pozycje tramwajów działają, brakuje tylko tła mapy.';
+      renderBanner();
     }
   });
 
@@ -65,7 +75,7 @@
 
   const popupHtml = (v) => `
     <div class="popup">
-      <h3>Tramwaj ${v.id ?? '?'} &middot; linia ${v.routeId ?? '?'}</h3>
+      <h3>Tramwaj ${v.fleetNumber ?? v.id ?? '?'} &middot; linia ${v.routeId ?? '?'}</h3>
       <dl>
         <dt>Model</dt><dd>NGT6D R1.1 (ex-Bonn)</dd>
         ${v.headsign ? `<dt>Kierunek</dt><dd>${v.headsign}</dd>` : ''}
@@ -122,14 +132,15 @@
     }
   }
 
-  function renderList(vehicles) {
+  function renderList(vehicles, failed) {
     el.list.innerHTML = '';
 
     if (!vehicles.length) {
       const empty = document.createElement('p');
       empty.className = 'empty';
-      empty.textContent =
-        'Żaden tramwaj z Bonn nie jest teraz na trasie. Wagony wyjeżdżają z zajezdni w godzinach szczytu.';
+      empty.textContent = failed
+        ? 'Nie udało się pobrać danych o pojazdach - to nie znaczy, że nic nie jeździ.'
+        : 'Żaden tramwaj z Bonn nie jest teraz na trasie. Wagony wyjeżdżają z zajezdni w godzinach szczytu.';
       el.list.append(empty);
       return;
     }
@@ -143,7 +154,7 @@
       item.innerHTML = `
         <span class="tram__line">${vehicle.routeId ?? '?'}</span>
         <span class="tram__meta">
-          <span class="tram__no">#${id} <span>NGT6 R1.1</span></span>
+          <span class="tram__no">#${vehicle.fleetNumber ?? id} <span>NGT6 R1.1</span></span>
           <span class="tram__sub">
             ${vehicle.headsign ? `→ ${vehicle.headsign} &middot; ` : ''}
             ${vehicle.speedKmh === null ? '' : `${vehicle.speedKmh} km/h &middot; `}
@@ -164,7 +175,7 @@
       if (fly) map.flyTo(position, Math.max(map.getZoom(), 15), { duration: 0.8 });
       entry.marker.openPopup();
     }
-    if (lastPayload) renderList(lastPayload.vehicles);
+    if (lastPayload) renderList(lastPayload.vehicles, Boolean(lastPayload.error));
   }
 
   map.on('dragstart', () => {
@@ -173,8 +184,10 @@
 
   function renderStatus(payload) {
     const demo = payload.mode === 'demo';
-    el.modeChip.textContent = demo ? 'tryb demo' : 'na żywo';
-    el.modeChip.className = `chip ${demo ? 'chip--demo' : 'chip--live'}`;
+    const failed = Boolean(payload.error) && !demo;
+
+    el.modeChip.textContent = failed ? 'błąd danych' : demo ? 'tryb demo' : 'na żywo';
+    el.modeChip.className = `chip ${failed ? 'chip--error' : demo ? 'chip--demo' : 'chip--live'}`;
 
     el.count.textContent = payload.vehicles.length;
     el.countLabel.textContent =
@@ -195,28 +208,35 @@
       ? 'Symulacja lokalna – dane poglądowe'
       : `Źródło: GTFS-RT ZTM Poznań · tabor: ${fleet.source ?? '—'} (${fleet.size ?? 0} nr)`;
 
-    if (payload.error && !demo) {
-      el.banner.hidden = false;
-      el.banner.textContent = `Błąd pobierania danych: ${payload.error}`;
-    } else {
-      el.banner.hidden = true;
-    }
+    dataError = failed ? `Błąd pobierania danych: ${payload.error}` : null;
+    renderBanner();
   }
+
+  /**
+   * Źródło danych. Domyślnie pyta backend tej aplikacji, ale wersja statyczna
+   * (GitHub Pages) podstawia tu funkcję pobierającą dane wprost z ZTM
+   * w przeglądarce - reszta interfejsu zostaje bez zmian.
+   */
+  const loadState =
+    window.__GDZIE_NIEMIEC_SOURCE__ ??
+    (async () => {
+      const response = await fetch('/api/vehicles', { cache: 'no-store' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    });
 
   async function refresh() {
     try {
-      const response = await fetch('/api/vehicles', { cache: 'no-store' });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const payload = await response.json();
+      const payload = await loadState();
       lastPayload = payload;
       renderStatus(payload);
       syncMarkers(payload.vehicles);
-      renderList(payload.vehicles);
+      renderList(payload.vehicles, Boolean(payload.error));
     } catch (error) {
       el.modeChip.textContent = 'brak połączenia';
       el.modeChip.className = 'chip chip--error';
-      el.banner.hidden = false;
-      el.banner.textContent = `Nie mogę połączyć się z serwerem aplikacji: ${error.message}`;
+      dataError = `Nie udało się pobrać danych: ${error.message}`;
+      renderBanner();
     }
   }
 

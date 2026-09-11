@@ -135,3 +135,16 @@ test('parsuje zakresy numerów taborowych', () => {
   assert.deepEqual(parseFleetList('971, 980'), ['971', '980']);
   assert.deepEqual(parseFleetList(''), []);
 });
+
+test('pokazuje czysty numer taborowy mimo prefiksu w feedzie', async () => {
+  const tracker = new Tracker({ ...baseConfig, useDictionary: false }, {
+    fetchVehiclePositions: async () => ({
+      feedTimestamp: nowSec(),
+      vehicles: [{ id: 'T_971', label: '971', lat: 52.4, lon: 16.9, timestamp: nowSec() }],
+    }),
+  });
+
+  const state = await tracker.getState();
+  assert.equal(state.vehicles[0].fleetNumber, '971');
+  assert.equal(state.vehicles[0].id, 'T_971', 'oryginalne id zostaje nietknięte');
+});
