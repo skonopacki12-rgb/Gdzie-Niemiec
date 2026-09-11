@@ -1,0 +1,17 @@
+# Wdrożenie na Render: New > Blueprint > wskaż to repozytorium.
+services:
+  - type: web
+    name: gdzie-niemiec
+    runtime: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Bez symulacji na produkcji - przy awarii feedu ZTM lepiej pokazać
+      # pustą mapę i komunikat niż zmyślone pozycje tramwajów.
+      - key: DEMO_FALLBACK
+        value: "0"

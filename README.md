@@ -50,6 +50,52 @@ Ten sam mechanizm działa awaryjnie: jeśli feed ZTM przestanie odpowiadać,
 aplikacja zamiast pustej mapy pokaże symulację i wyraźnie ją oznaczy
 (`DEMO_FALLBACK=0` wyłącza to zachowanie).
 
+## Wdrożenie do sieci
+
+Aplikacja jest serwerem Node (to backend odpytuje ZTM i filtruje tabor), więc
+potrzebuje hostingu uruchamiającego proces — sam hosting plików statycznych nie
+wystarczy. W repo są gotowe konfiguracje dla trzech typowych dróg.
+
+### Fly.io (polecane — region Warszawa)
+
+```bash
+fly launch --copy-config --name gdzie-niemiec-twoja-nazwa
+fly deploy
+fly open
+```
+
+`fly.toml` ustawia region `waw`, HTTPS, healthcheck na `/api/health` i usypianie
+maszyny przy braku ruchu (`auto_stop_machines`), więc mały ruch mieści się
+w darmowym limicie. Kosztem jest ~1 s zimnego startu po dłuższej przerwie.
+
+### Render (bez CLI, przez przeglądarkę)
+
+W panelu Render: **New → Blueprint** i wskaż to repozytorium — `render.yaml`
+zawiera resztę. Każdy push na gałąź wdraża się sam. Na darmowym planie serwis
+zasypia po 15 minutach bezczynności.
+
+### Własny serwer / VPS
+
+```bash
+docker build -t gdzie-niemiec .
+docker run -d --restart=unless-stopped -p 8080:8080 --name gdzie-niemiec gdzie-niemiec
+```
+
+Przed kontenerem postaw reverse proxy z certyfikatem (Caddy, nginx, Traefik).
+Obraz startuje jako użytkownik `node`, nie jako root.
+
+### O czym pamiętać na produkcji
+
+- **`DEMO_FALLBACK=0`** — ustawione we wszystkich powyższych konfiguracjach.
+  Na publicznej stronie awaria feedu ZTM ma dać pustą mapę i komunikat o błędzie,
+  a nie symulowane tramwaje, których nikt nie odróżni od prawdziwych.
+- **Jedna instancja wystarczy.** Cache feedu żyje w pamięci procesu, więc jedna
+  maszyna oznacza najwyżej jedno zapytanie do ZTM na 8 sekund niezależnie od
+  liczby odwiedzających. Skalowanie w poziom zwielokrotniłoby ruch do ZTM.
+- Serwer słucha na `0.0.0.0` i bierze port ze zmiennej `PORT`, więc działa też na
+  hostingach, które narzucają port (Heroku, Railway, App Runner).
+- `/api/health` nadaje się na healthcheck i monitoring zewnętrzny (np. UptimeRobot).
+
 ## API
 
 | Endpoint | Opis |

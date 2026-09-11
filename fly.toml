@@ -1,0 +1,31 @@
+# Wdrożenie na Fly.io:  fly launch --copy-config --name <twoja-nazwa>  &&  fly deploy
+app = "gdzie-niemiec"
+primary_region = "waw"   # Warszawa - najbliżej Poznania i serwerów ZTM
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  # Bez symulacji na produkcji - patrz komentarz w Dockerfile.
+  DEMO_FALLBACK = "0"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  # Jedna maszyna wystarczy i trzyma cache feedu w jednym miejscu,
+  # czyli ZTM dostaje od nas najwyżej jedno zapytanie na 8 sekund.
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/api/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
