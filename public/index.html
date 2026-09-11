@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gdzie Niemiec? – tramwaje z Bonn w Poznaniu</title>
+    <meta
+      name="description"
+      content="Mapa na żywo tramwajów Duewag/Siemens NGT6D R1.1 sprowadzonych z Bonn i kursujących po Poznaniu."
+    />
+    <link rel="stylesheet" href="/vendor/leaflet/leaflet.css" />
+    <link rel="stylesheet" href="/style.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='11' y='0' fill='%23000'/%3E%3Crect width='32' height='11' y='11' fill='%23dd0000'/%3E%3Crect width='32' height='10' y='22' fill='%23ffce00'/%3E%3C/svg%3E"
+    />
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="panel">
+        <header class="panel__header">
+          <div class="flag" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div>
+            <h1>Gdzie Niemiec?</h1>
+            <p class="subtitle">Tramwaje NGT6 R1.1 z Bonn na ulicach Poznania</p>
+          </div>
+        </header>
+
+        <div class="status" id="status">
+          <div class="status__row">
+            <span class="chip" id="mode-chip">łączenie…</span>
+            <span class="chip chip--muted" id="updated-chip">—</span>
+          </div>
+          <p class="counter"><strong id="count">–</strong> <span id="count-label">na trasie</span></p>
+          <p class="hint" id="hint"></p>
+        </div>
+
+        <div class="list" id="list" role="list"></div>
+
+        <footer class="panel__footer">
+          <p id="source-note">Źródło: GTFS-RT ZTM Poznań</p>
+        </footer>
+      </aside>
+
+      <main class="map-wrap">
+        <div id="map"></div>
+        <div class="banner" id="banner" hidden></div>
+      </main>
+    </div>
+
+    <script src="/vendor/leaflet/leaflet.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>
